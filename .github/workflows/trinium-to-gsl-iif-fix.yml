@@ -1,0 +1,70 @@
+name: Trinium to GSL IIF Fix
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test-and-build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install test and build tools
+        run: python -m pip install --upgrade pip pytest pyinstaller
+
+      - name: Run tests
+        run: python -m pytest quickbooks-iif-fixer/tests
+
+      - name: Build the Windows app
+        working-directory: quickbooks-iif-fixer
+        run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name Trinium-to-GSL-IIF-Fix fix_iif_gui.py
+
+      - name: Confirm the exe exists
+        shell: pwsh
+        run: |
+          $exe = "quickbooks-iif-fixer/dist/Trinium-to-GSL-IIF-Fix.exe"
+          if (-not (Test-Path $exe)) {
+            Write-Error "Missing $exe"
+            exit 1
+          }
+          Get-Item $exe | Select-Object FullName, Length
+
+      - name: Upload the exe from this run
+        uses: actions/upload-artifact@v7
+        with:
+          name: Trinium-to-GSL-IIF-Fix
+          path: quickbooks-iif-fixer/dist/Trinium-to-GSL-IIF-Fix.exe
+          if-no-files-found: error
+
+      - name: Publish the exe on a public GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: pwsh
+        run: |
+          $notes = @"
+          Download Trinium-to-GSL-IIF-Fix.exe and double-click it.
+
+          Choose the Trinium .iif export, then click Fix file. Import the saved file in QuickBooks Desktop under File > Utilities > Import > IIF Files. Try the import on a backup company file first.
+          "@
+          gh release create $env:RELEASE_TAG `
+            --repo $env:GITHUB_REPOSITORY `
+            --title "Trinium to GSL IIF Fix" `
+            --notes $notes `
+            "quickbooks-iif-fixer/dist/Trinium-to-GSL-IIF-Fix.exe"
