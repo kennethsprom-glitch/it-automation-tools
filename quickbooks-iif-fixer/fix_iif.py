@@ -65,7 +65,18 @@ def fix_lines(lines, item_map=None, keep_class=None, date=None, terms_days=None)
                 cols[idx["DUEDATE"]] = due.strftime("%m/%d/%Y")
             else:
                 cols[idx["DUEDATE"]] = four_digit_year(cols[idx["DUEDATE"]])
-        out.append("\t".join(cols).rstrip("\t") if tag != "TRNS" else "\t".join(cols))
+        if tag == "TRNS":
+            rendered = "\t".join(cols)
+        elif tag == "SPL" and "CLASS" in idx:
+            # Keep a blank CLASS column (a trailing tab). Still drop empty columns after it.
+            end = len(cols)
+            keep_through = idx["CLASS"] + 1
+            while end > keep_through and cols[end - 1] == "":
+                end -= 1
+            rendered = "\t".join(cols[:end])
+        else:
+            rendered = "\t".join(cols).rstrip("\t")
+        out.append(rendered)
     return out
 
 

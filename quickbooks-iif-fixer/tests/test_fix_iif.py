@@ -35,7 +35,8 @@ def test_all_five_items_map_and_class_stays_blank():
     out = fix_iif.fix_lines(lines)
     spl = rows(out, "SPL")
     assert [row[11] for row in spl] == ["DR", "FS", "PRE", "PD", "CHR"]
-    assert all(len(row) <= 13 or row[13] == "" for row in spl)
+    assert all(row[13] == "" for row in spl)
+    assert all(line.endswith("\t") and not line.endswith("\t\t") for line in out if line.startswith("SPL\t"))
 
 
 def test_items_mapped():
@@ -46,7 +47,8 @@ def test_items_mapped():
 def test_class_cleared_and_unquoted():
     out = run(keep_class=["OPS"])
     assert rows(out, "TRNS")[0][17] == "OPS"
-    assert all(len(r) <= 13 or r[13] == "" for r in rows(out, "SPL"))
+    assert all(r[13] == "" for r in rows(out, "SPL"))
+    assert all(line.endswith("\t") and not line.endswith("\t\t") for line in out if line.startswith("SPL\t"))
     assert '"' not in "\n".join(run())
 
 
