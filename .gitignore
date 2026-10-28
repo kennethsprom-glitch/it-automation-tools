@@ -4,3 +4,6 @@ __pycache__/
 .venv/
 .DS_Store
 *.iif.bak
+build/
+dist/
+*.spec
