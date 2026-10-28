@@ -84,7 +84,7 @@ def load_item_map(path):
         not isinstance(key, str) or not isinstance(value, str) for key, value in data.items()
     ):
         raise ValueError(
-            'The item list must look like {"Fuel Surcharge": "FSC"}. '
+            'The item list must look like {"Fuel Surcharge": "FS"}. '
             "Leave the box empty to use the built-in list."
         )
     return data
