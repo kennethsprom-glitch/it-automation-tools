@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Example Logistics Co. Directory</title>
+<style>
+:root { --navy:#091242; --green:#46823b; --mist:#eef8f0; --paper:#f4f6f3; --line:#d5ddd6; --muted:#58595d; --white:#fff; --sky:#6fccee; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:"Segoe UI", system-ui, sans-serif; background:var(--paper); color:var(--navy); }
+header { background:var(--navy); color:#fff; }
+.bar { max-width:960px; margin:0 auto; padding:16px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+.logo-wrap { background:#fff; border-radius:8px; padding:8px 12px; }
+.logo { height:32px; width:auto; display:block; }
+h1 { margin:0; font-size:1.15rem; }
+.kicker { margin:0 0 2px; color:var(--sky); font-size:.85rem; font-weight:600; }
+main { max-width:960px; margin:0 auto; padding:16px; }
+input[type=search] { width:100%; border:1px solid var(--line); border-radius:12px; padding:12px 14px; font-size:1rem; }
+.tools { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:14px 0; }
+button { min-height:44px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--navy); font-weight:650; padding:8px 16px; cursor:pointer; }
+button.on { background:var(--green); color:#fff; border-color:var(--green); }
+.count { margin-left:auto; color:var(--muted); font-size:.9rem; }
+.card { background:#fff; border:1px solid var(--line); border-radius:12px; overflow:auto; }
+table { width:100%; border-collapse:collapse; font-size:.95rem; }
+th { text-align:left; background:var(--mist); padding:12px 14px; }
+td { padding:12px 14px; border-top:1px solid var(--line); }
+tr.click { cursor:pointer; }
+tr.click:hover { background:var(--mist); }
+.ext { color:var(--green); font-weight:700; }
+.dept { padding:16px; border-top:1px solid var(--line); }
+.dept:first-child { border-top:0; }
+.dept h2 { margin:0; font-size:1.1rem; }
+.meta { color:var(--muted); font-size:.9rem; }
+.grid { display:grid; gap:8px; margin-top:10px; }
+@media (min-width:640px) { .grid { grid-template-columns:1fr 1fr; } .hide-sm { } }
+@media (max-width:639px) { .hide-sm { display:none; } }
+.person { width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; border-radius:8px; }
+.person span { display:block; }
+.sub { color:var(--muted); font-weight:500; font-size:.85rem; }
+.empty { text-align:center; color:var(--muted); padding:36px 12px; }
+.overlay { position:fixed; inset:0; background:rgba(9,18,66,.5); display:flex; align-items:flex-end; justify-content:center; padding:16px; }
+@media (min-width:640px) { .overlay { align-items:center; } }
+.modal { background:#fff; border-radius:12px; width:min(440px,100%); padding:18px; }
+.modal h2 { margin:0; }
+dl { margin:14px 0 0; }
+.row { display:grid; grid-template-columns:9rem 1fr; gap:8px; margin-bottom:10px; font-size:.95rem; }
+dt { color:var(--muted); font-weight:650; }
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <div class="logo-wrap"><strong style="font-size:1.25rem;color:#091242">Example Logistics Co.</strong>
+</div>
+  <div><p class="kicker">Company directory</p><h1>Find a person, extension, or number</h1></div>
+</div></header>
+<main>
+  <input id="q" type="search" placeholder="Search by name, extension, department, or phone number" aria-label="Search directory">
+  <div class="tools">
+    <button type="button" data-view="employees" class="on">Employees</button>
+    <button type="button" data-view="departments">Departments</button>
+    <button type="button" data-view="phones">Phone numbers</button>
+    <div class="count" id="count"></div>
+  </div>
+  <div class="card" id="out"></div>
+</main>
+<script>
+const PEOPLE = [{"ext": "100", "name": "Jane Doe", "phone": "(555) 010-0000", "outbound": "(555) 010-0000", "type": "Unlimited Extension", "departments": ["Executive Team"]}, {"ext": "101", "name": "Morgan Roe", "phone": "(555) 010-0001", "outbound": "(555) 010-0001", "type": "Unlimited Extension", "departments": ["Customer Service"]}, {"ext": "102", "name": "Casey Example", "phone": "(555) 010-0002", "outbound": "(555) 010-0002", "type": "Unlimited Extension", "departments": ["Dispatch"]}, {"ext": "103", "name": "Sam Sample", "phone": "(555) 010-0003", "outbound": "(555) 010-0003", "type": "Unlimited Extension", "departments": ["Dispatch"]}, {"ext": "104", "name": "Pat Placeholder", "phone": "(555) 010-0004", "outbound": "(555) 010-0004", "type": "Unlimited Extension", "departments": ["Accounting"]}, {"ext": "105", "name": "Chris Test", "phone": "(555) 010-0005", "outbound": "(555) 010-0005", "type": "Unlimited Extension", "departments": ["IT"]}, {"ext": "106", "name": "Jordan Demo", "phone": "(555) 010-0006", "outbound": "(555) 010-0006", "type": "Unlimited Extension", "departments": ["Yards"]}, {"ext": "107", "name": "Taylor Fake", "phone": "(555) 010-0007", "outbound": "(555) 010-0007", "type": "Unlimited Extension", "departments": ["Yards"]}];
+const DEPARTMENTS = [{"name": "Executive Team", "ext": "200", "phones": ""}, {"name": "Customer Service", "ext": "201", "phones": ""}, {"name": "Dispatch", "ext": "202", "phones": ""}, {"name": "Accounting", "ext": "203", "phones": ""}, {"name": "IT", "ext": "204", "phones": ""}, {"name": "Yards", "ext": "205", "phones": ""}];
+const PHONES = [{"phone": "(555) 010-0000", "ext": "100", "name": "Jane Doe", "status": "In Use", "department": "Executive Team"}, {"phone": "(555) 010-0001", "ext": "101", "name": "Morgan Roe", "status": "In Use", "department": "Customer Service"}, {"phone": "(555) 010-0002", "ext": "102", "name": "Casey Example", "status": "In Use", "department": "Dispatch"}, {"phone": "(555) 010-0003", "ext": "103", "name": "Sam Sample", "status": "In Use", "department": "Dispatch"}, {"phone": "(555) 010-0004", "ext": "104", "name": "Pat Placeholder", "status": "In Use", "department": "Accounting"}, {"phone": "(555) 010-0005", "ext": "105", "name": "Chris Test", "status": "In Use", "department": "IT"}, {"phone": "(555) 010-0006", "ext": "106", "name": "Jordan Demo", "status": "In Use", "department": "Yards"}, {"phone": "(555) 010-0007", "ext": "107", "name": "Taylor Fake", "status": "In Use", "department": "Yards"}, {"phone": "(555) 010-0090", "ext": "", "name": "Yard A - Gate", "status": "In Use", "department": "Yards"}, {"phone": "(555) 010-0091", "ext": "", "name": "Yard B - Office", "status": "In Use", "department": "Yards"}];
+const q = document.getElementById("q");
+const out = document.getElementById("out");
+const count = document.getElementById("count");
+let view = "employees";
+function norm(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]/g,""); }
+function hit(query, fields){
+  const n = norm(query); if(!n) return true;
+  return fields.some(f => norm(f).includes(n));
+}
+function dash(v){ return v ? v : "—"; }
+function esc(s){ return String(s??"").replace(/[&<>"]/g, c => ({'&':'&','<':'<','>':'>','"':'"'}[c])); }
+function render(){
+  const query = q.value.trim();
+  const people = PEOPLE.filter(p => hit(query, [p.name, p.ext, p.phone, p.outbound, p.departments.join(" ")]));
+  const phones = PHONES.filter(l => hit(query, [l.phone, l.name, l.ext, l.department, l.status]));
+  const depts = DEPARTMENTS.map(d => ({...d, members: people.filter(p => p.departments.includes(d.name))}))
+    .filter(d => !query || d.members.length || hit(query, [d.name, d.ext, d.phones]));
+  if (view === "employees") {
+    count.textContent = people.length + " employees";
+    out.innerHTML = people.length ? `<table><thead><tr><th>Ext</th><th>Name</th><th>Department</th><th class="hide-sm">Phone</th></tr></thead><tbody>` +
+      people.map(p => `<tr class="click" data-i="${PEOPLE.indexOf(p)}"><td class="ext">${esc(p.ext)}</td><td>${esc(p.name)}</td><td>${esc(p.departments.join(", "))}</td><td class="hide-sm">${esc(dash(p.phone))}</td></tr>`).join("") + `</tbody></table>` : `<p class="empty">No employees match that search.</p>`;
+  } else if (view === "departments") {
+    count.textContent = depts.length + " departments";
+    out.innerHTML = depts.length ? depts.map(d => `<section class="dept"><h2>${esc(d.name)}</h2><p class="meta">${d.ext ? "Ext "+esc(d.ext) : "No group extension"}${d.phones ? " · "+esc(d.phones) : ""} · ${d.members.length} people</p>` +
+      (d.members.length ? `<div class="grid">` + d.members.map(p => `<button class="person" type="button" data-i="${PEOPLE.indexOf(p)}"><span><span>${esc(p.name)}</span><span class="sub">${esc(p.phone || "No direct number")}</span></span><span class="ext">${esc(p.ext)}</span></button>`).join("") + `</div>` : `<p class="meta">No one assigned.</p>`) + `</section>`).join("") : `<p class="empty">No departments match that search.</p>`;
+  } else {
+    count.textContent = phones.length + " phone numbers";
+    out.innerHTML = phones.length ? `<table><thead><tr><th>Phone</th><th>Ext</th><th>Name</th><th class="hide-sm">Department</th></tr></thead><tbody>` +
+      phones.map(l => `<tr><td>${esc(l.phone)}</td><td class="ext">${esc(l.ext || "—")}</td><td>${esc(l.name)}</td><td class="hide-sm">${esc(l.department || l.status)}</td></tr>`).join("") + `</tbody></table>` : `<p class="empty">No phone numbers match that search.</p>`;
+  }
+}
+function openPerson(i){
+  const p = PEOPLE[Number(i)]; if(!p) return;
+  const overlay = document.createElement("div");
+  overlay.className = "overlay";
+  overlay.innerHTML = `<div class="modal" role="dialog"><p class="ext">${p.ext ? "Extension "+esc(p.ext) : "No extension"}</p><h2>${esc(p.name)}</h2><dl>
+    <div class="row"><dt>Department</dt><dd>${esc(p.departments.join(", "))}</dd></div>
+    <div class="row"><dt>Phone</dt><dd>${esc(dash(p.phone))}</dd></div>
+    <div class="row"><dt>Outbound caller ID</dt><dd>${esc(dash(p.outbound))}</dd></div>
+    <div class="row"><dt>Type</dt><dd>${esc(p.type)}</dd></div>
+  </dl><button type="button" id="close">Close</button></div>`;
+  overlay.addEventListener("click", e => { if (e.target === overlay || e.target.id === "close") overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+q.addEventListener("input", render);
+document.querySelector(".tools").addEventListener("click", e => {
+  const btn = e.target.closest("[data-view]"); if(!btn) return;
+  view = btn.dataset.view;
+  document.querySelectorAll("[data-view]").forEach(b => b.classList.toggle("on", b === btn));
+  render();
+});
+out.addEventListener("click", e => {
+  const row = e.target.closest("[data-i]");
+  if (row) openPerson(row.dataset.i);
+});
+render();
+</script>
+</body></html>
