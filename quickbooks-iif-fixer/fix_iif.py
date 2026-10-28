@@ -11,11 +11,11 @@ import argparse, json, sys
 from datetime import datetime, timedelta
 
 DEFAULT_ITEM_MAP = {
-    "Drayage": "DRAY",
-    "Fuel Surcharge": "FSC",
-    "PRE PULL": "PREPULL",
-    "PER DIEM": "PERDIEM",
-    "Chassis Rental": "CHASSIS",
+    "Drayage": "DR",
+    "Fuel Surcharge": "FS",
+    "PRE PULL": "PRE",
+    "PER DIEM": "PD",
+    "Chassis Rental": "CHR",
 }
 
 

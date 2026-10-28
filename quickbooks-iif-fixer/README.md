@@ -31,10 +31,22 @@ python3 fix_iif_gui.py
 
 | QuickBooks error | Cause | Fix |
 |---|---|---|
-| **11585 – Item does not exist** | The TMS writes long charge names (`Fuel Surcharge`, `PER DIEM`) in `INVITEM`, which don't match QuickBooks item names. | Maps each name to a QuickBooks item code via a JSON mapping. |
+| **11585 – Item does not exist** | The TMS writes long charge names (`Fuel Surcharge`, `PER DIEM`) in `INVITEM`, which don't match QuickBooks item names. | Maps each name to a QuickBooks item code. The built-in codes are below. A JSON file passed with `--map` replaces that list. |
 | **3140 – Invalid Class reference** | The TMS puts charge codes in the `CLASS` column, wrapped in quotes (`"FS"`), which aren't classes in QuickBooks. | Strips quotes and blanks any class not passed with `--keep-class`. |
 | **Closed-period date** | Invoice dates fall in a period that's already closed in QuickBooks. | `--date MM/DD/YYYY` rewrites invoice and line dates; `--terms-days N` recomputes the due date. |
 | Ambiguous due dates | Due dates exported as `MM/DD/YY`. | Converted to `MM/DD/YYYY`. |
+
+## Built-in item codes
+
+These five codes are the QuickBooks items the built-in list writes. A class on the same line is still cleared, so the fixed file has no class value unless you pass `--keep-class` for a class that already exists in QuickBooks.
+
+| Trinium charge name | QuickBooks item |
+|---|---|
+| Drayage | DR |
+| Fuel Surcharge | FS |
+| PRE PULL | PRE |
+| PER DIEM | PD |
+| Chassis Rental | CHR |
 
 ## Usage
 

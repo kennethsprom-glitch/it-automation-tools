@@ -37,7 +37,7 @@ def test_parse_helpers():
     with pytest.raises(ValueError):
         gui.parse_terms_days("thirty")
     assert gui.load_item_map("") is None
-    assert gui.load_item_map(str(EXAMPLE_MAP))["Fuel Surcharge"] == "FSC"
+    assert gui.load_item_map(str(EXAMPLE_MAP))["Fuel Surcharge"] == "FS"
 
 
 def test_apply_fix_matches_sample(tmp_path):
@@ -45,9 +45,9 @@ def test_apply_fix_matches_sample(tmp_path):
     report = gui.apply_fix(str(SAMPLE), str(target))
     assert target.read_bytes() == EXPECTED.read_bytes()
     assert "Saved " in report
-    assert "Drayage to DRAY" in report
-    assert "Fuel Surcharge to FSC" in report
-    assert "PER DIEM to PERDIEM" in report
+    assert "Drayage to DR" in report
+    assert "Fuel Surcharge to FS" in report
+    assert "PER DIEM to PD" in report
     assert "Items mapped: 3" in report
     assert "Classes cleared: 4" in report
     assert '"OPS" removed' in report
@@ -66,7 +66,7 @@ def test_apply_fix_with_map_date_and_kept_class(tmp_path):
         keep_text="OPS",
     )
     text = target.read_text(encoding="utf-8")
-    assert "DRAY" in text and "FSC" in text and "PERDIEM" in text
+    assert "\tDR\t" in text and "\tFS\t" in text and "\tPD\t" in text
     assert "03/02/2026" in text and "04/01/2026" in text
     assert "\tOPS\t" in text
     assert "Classes kept: 1" in report
