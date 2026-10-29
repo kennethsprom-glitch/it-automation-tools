@@ -16,6 +16,7 @@ if str(_HERE) not in sys.path:
 import fix_iif
 
 APP_NAME = "Trinium to GSL IIF Fix"
+VERSION = fix_iif.VERSION
 
 tk = None
 filedialog = None
@@ -130,6 +131,7 @@ def summarize_changes(original_lines, fixed_lines):
     cleared = []
     kept = []
     dates = []
+    terms_changed = []
     for (left, left_idx), (right, right_idx) in zip(before, after):
         if "INVITEM" in left_idx and "INVITEM" in right_idx:
             old = left[left_idx["INVITEM"]]
@@ -150,6 +152,11 @@ def summarize_changes(original_lines, fixed_lines):
                 new = right[right_idx[field]]
                 if old != new:
                     dates.append((label, old, new))
+        if "TERMS" in left_idx and "TERMS" in right_idx:
+            old = left[left_idx["TERMS"]]
+            new = right[right_idx["TERMS"]]
+            if old != new:
+                terms_changed.append((old or "(blank)", new or "(blank)"))
 
     sections = [f"Items mapped: {len(items)}"]
     if items:
@@ -177,6 +184,14 @@ def summarize_changes(original_lines, fixed_lines):
             sections.append(f"  {label} {old} to {new} ({_lines_word(count)})")
     else:
         sections.append("  No dates needed a change.")
+
+    sections.append("")
+    sections.append(f"Terms changed: {len(terms_changed)}")
+    if terms_changed:
+        for (old, new), count in _tally(terms_changed):
+            sections.append(f"  {old} to {new} ({_lines_word(count)})")
+    else:
+        sections.append("  No terms needed a change.")
 
     if len(before) != len(after):
         sections.append("")
@@ -214,21 +229,27 @@ def apply_fix(input_path, output_path, date_text="", terms_text="30", map_path="
             "That file does not look like a QuickBooks IIF invoice. Choose the .iif export."
         )
 
+    notes = []
     fixed = fix_iif.fix_lines(
         original,
         item_map=item_map,
         keep_class=keep,
         date=date,
         terms_days=terms,
+        warnings=notes,
     )
     with open(target, "w", newline="") as handle:
         handle.write("\r\n".join(fixed) + "\r\n")
-    return f"Saved {target}\n\n{summarize_changes(original, fixed)}"
+    report = f"Saved {target}\n\n{summarize_changes(original, fixed)}"
+    if notes:
+        report += "\n\n" + "\n".join(notes)
+    return report
 
 
 class App:
     def __init__(self, root):
         self.root = root
+        self.root.title(f"{APP_NAME} {VERSION}")
         self.output_is_automatic = True
         self._setting_output = False
 
@@ -245,7 +266,12 @@ class App:
         outer = tk.Frame(root, padx=16, pady=12)
         outer.pack(fill="both", expand=True)
 
-        tk.Label(outer, text=APP_NAME, font=("Segoe UI", 18, "bold"), anchor="w").pack(fill="x")
+        tk.Label(
+            outer,
+            text=f"{APP_NAME} {VERSION}",
+            font=("Segoe UI", 18, "bold"),
+            anchor="w",
+        ).pack(fill="x")
         tk.Label(
             outer,
             text="Prepare a Trinium invoice export so QuickBooks Desktop can import it.",
@@ -420,7 +446,7 @@ def run_app():
     scrolledtext = scrolledtext_module
 
     root = tk.Tk()
-    root.title(APP_NAME)
+    root.title(f"{APP_NAME} {VERSION}")
     root.geometry("700x740")
     root.minsize(560, 640)
     App(root)
