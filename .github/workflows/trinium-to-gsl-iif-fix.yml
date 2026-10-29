@@ -59,9 +59,9 @@ jobs:
         shell: pwsh
         run: |
           $notes = @"
-          Download Trinium-to-GSL-IIF-Fix.exe and double-click it.
+          Version 1.1.0 sets every invoice's terms to Net 30 and recalculates the due date as the invoice date plus 30 days. This avoids QuickBooks error 11710 when an export uses Net 45. Item names, classes, and closed-period dates are cleaned up as before.
 
-          Choose the Trinium .iif export, then click Fix file. Import the saved file in QuickBooks Desktop under File > Utilities > Import > IIF Files. Try the import on a backup company file first.
+          Download Trinium-to-GSL-IIF-Fix.exe and double-click it. Choose the Trinium .iif export, click Fix file, then import the saved file in QuickBooks Desktop under File > Utilities > Import > IIF Files. Try the import on a backup company file first.
           "@
           gh release create $env:RELEASE_TAG `
             --repo $env:GITHUB_REPOSITORY `

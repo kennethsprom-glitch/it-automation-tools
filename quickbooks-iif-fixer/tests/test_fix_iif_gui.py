@@ -9,13 +9,16 @@ sys.path.insert(0, str(HERE))
 import fix_iif_gui as gui
 
 SAMPLE = HERE / "samples" / "sample_export.iif"
+SAMPLE_NET45 = HERE / "samples" / "sample_net45.iif"
 EXPECTED = HERE / "samples" / "expected_output.iif"
 EXPECTED_REDATED = HERE / "samples" / "expected_output_redated.iif"
+EXPECTED_NET45 = HERE / "samples" / "expected_output_net45.iif"
 EXAMPLE_MAP = HERE / "item_map.example.json"
 
 
 def test_app_name():
     assert gui.APP_NAME == "Trinium to GSL IIF Fix"
+    assert gui.VERSION == "1.1.0"
 
 
 def test_default_output_sits_next_to_input(tmp_path):
@@ -74,6 +77,34 @@ def test_apply_fix_with_map_date_and_kept_class(tmp_path):
     assert '"OPS" removed' not in report
     assert "Invoice date 01/05/2026 to 03/02/2026" in report
     assert "Due date 02/04/26 to 04/01/2026" in report
+
+
+def test_apply_fix_rewrites_net45_terms(tmp_path):
+    target = tmp_path / "net45_fixed.iif"
+    report = gui.apply_fix(str(SAMPLE_NET45), str(target))
+    data = target.read_bytes()
+    assert data == EXPECTED_NET45.read_bytes()
+    assert data.endswith(b"\r\n")
+    assert b"\n" not in data.replace(b"\r\n", b"")
+    assert "Net 45 to Net 30 (2 lines)" in report
+    assert "Due date 12/13/2026 to 11/28/2026" in report
+    assert "Due date 01/29/2027 to 01/14/2027" in report
+    assert "Drayage to DR" in report
+    assert "Chassis Rental to CHR" in report
+    assert "warning:" not in report
+
+
+def test_apply_fix_warns_when_a_terms_column_is_missing(tmp_path):
+    source = tmp_path / "missing.iif"
+    source.write_bytes(b"!TRNS\tDATE\tNAME\r\nTRNS\t10/29/2026\tACME HARBOR SAMPLE\r\n")
+    target = tmp_path / "missing_fixed.iif"
+    report = gui.apply_fix(str(source), str(target))
+    saved = target.read_bytes()
+    assert b"TRNS\t10/29/2026\tACME HARBOR SAMPLE" in saved
+    assert b"Net 30" not in saved
+    assert saved.endswith(b"\r\n")
+    assert "warning:" in report
+    assert "TERMS" in report
 
 
 def test_redate_without_a_kept_class_matches_sample(tmp_path):
@@ -137,8 +168,8 @@ def test_window_fills_output_and_reports(tmp_path, monkeypatch):
     try:
         root.title("check")
         app = gui.App(root)
-        assert root.title() == "check"
-        app.root.title(gui.APP_NAME)
+        assert root.title() == f"{gui.APP_NAME} {gui.VERSION}"
+        assert "1.1.0" in app.root.title()
         source = tmp_path / "sample_export.iif"
         source.write_bytes(SAMPLE.read_bytes())
         app.input_var.set(str(source))
@@ -150,6 +181,7 @@ def test_window_fills_output_and_reports(tmp_path, monkeypatch):
         assert "Items mapped: 3" in log
         assert "Classes cleared: 4" in log
         assert "Dates changed: 1" in log
+        assert "No terms needed a change." in log
         assert pathlib.Path(app.output_var.get()).read_bytes() == EXPECTED.read_bytes()
 
         app.fix_file()
