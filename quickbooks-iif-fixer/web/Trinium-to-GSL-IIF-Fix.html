@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trinium to GSL IIF Fix (Web)</title>
+<style>
+:root {
+  --ink: #142033;
+  --muted: #5c675f;
+  --paper: #f3f5f4;
+  --card: #fff;
+  --line: #d5ddd8;
+  --green: #0b6e4f;
+  --green-dark: #084c38;
+  --mist: #e7f3ec;
+  --amber-bg: #fff6e8;
+  --amber: #6b4a08;
+  --bad-bg: #fdecec;
+  --bad: #8d2b2b;
+  --changed: #0b6e4f;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--ink);
+  background: var(--paper);
+}
+header { background: var(--ink); color: #fff; }
+.wrap { max-width: 44rem; margin: 0 auto; padding: 16px; }
+header .wrap { padding-top: 20px; padding-bottom: 20px; }
+h1 { margin: 0; font-size: 1.35rem; line-height: 1.25; }
+.note { margin: 8px 0 0; color: #d5e4da; }
+.sub { margin: 8px 0 0; }
+main { padding-bottom: 24px; }
+.drop {
+  border: 2px dashed var(--line);
+  background: var(--card);
+  border-radius: 12px;
+  padding: 20px 16px;
+  text-align: center;
+}
+.drop.drag { border-color: var(--green); background: var(--mist); }
+.drop p { margin: 0 0 12px; }
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+button, .download {
+  font: inherit;
+  font-weight: 650;
+  min-height: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--green);
+  background: var(--green);
+  color: #fff;
+  padding: 10px 18px;
+  cursor: pointer;
+}
+button.secondary {
+  background: #fff;
+  color: var(--ink);
+  border-color: var(--line);
+}
+button:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 3px solid #8fceb0;
+  outline-offset: 2px;
+}
+button:disabled, .download:disabled {
+  background: #9aa89f;
+  border-color: #9aa89f;
+  cursor: not-allowed;
+}
+.chosen { margin: 10px 0 0; color: var(--muted); overflow-wrap: anywhere; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 14px;
+}
+label { display: block; font-weight: 650; margin-bottom: 4px; }
+.hint { display: block; color: var(--muted); font-size: 0.9rem; font-weight: 400; margin-top: 4px; }
+input[type="text"] {
+  width: 100%;
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+}
+.grid { display: grid; gap: 12px; margin-top: 12px; }
+@media (min-width: 640px) {
+  .grid { grid-template-columns: 1fr 1fr; }
+}
+details { margin-top: 12px; }
+summary { cursor: pointer; font-weight: 650; min-height: 44px; display: flex; align-items: center; }
+.stack { margin-top: 8px; }
+.error, .warnings {
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 14px;
+}
+.error { background: var(--bad-bg); color: var(--bad); }
+.warnings { background: var(--amber-bg); color: var(--amber); }
+.warnings h2, .preview-head { margin: 0 0 8px; font-size: 1.05rem; }
+.warnings p { margin: 0 0 6px; overflow-wrap: anywhere; }
+.invoice {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 12px;
+}
+.invoice h2 { margin: 0 0 8px; font-size: 1.05rem; overflow-wrap: anywhere; }
+.invoice h3 { margin: 12px 0 4px; font-size: 0.95rem; }
+.flag { margin: 0 0 8px; color: var(--amber); font-weight: 650; }
+.field {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr 1fr;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.field .label { font-weight: 650; }
+.k { display: block; color: var(--muted); font-size: 0.75rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.03em; }
+.v { overflow-wrap: anywhere; }
+.changed .v { color: var(--changed); font-weight: 700; }
+.line { margin-top: 8px; }
+.line-k { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.empty { color: var(--muted); }
+.actions { margin-top: 14px; }
+.download { width: 100%; overflow-wrap: anywhere; }
+footer { color: var(--muted); font-size: 0.9rem; margin-top: 8px; }
+@media (max-width: 520px) {
+  .field { grid-template-columns: 1fr 1fr; }
+  .field .label { grid-column: 1 / -1; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Trinium to GSL IIF Fix (Web)</h1>
+    <p class="note">Files are processed only in your browser. Nothing is uploaded, and the original file is not changed.</p>
+    <p class="sub">Cleans a Trinium IIF export so QuickBooks Desktop can import it: item codes, blank classes, terms, and due dates.</p>
+  </div>
+</header>
+<main>
+  <div class="wrap">
+    <div id="drop" class="drop" tabindex="0">
+      <p>Drop a .iif file here</p>
+      <button type="button" id="browse" class="secondary">Choose file</button>
+      <input id="file" class="file-input" type="file" accept=".iif,.IIF,text/plain" aria-label="Choose the IIF export">
+      <p id="chosen" class="chosen"></p>
+    </div>
+
+    <div class="card">
+      <label for="terms">Terms</label>
+      <input id="terms" type="text" value="Net 30" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <span class="hint">Written on every invoice. The due date is the invoice date plus the number of days in this name.</span>
+      <div class="grid">
+        <div>
+          <label for="date">New invoice date (optional)</label>
+          <input id="date" type="text" inputmode="numeric" placeholder="MM/DD/YYYY" autocomplete="off" spellcheck="false">
+          <span class="hint">Only if QuickBooks says the period is closed. Rewrites invoice and line dates.</span>
+        </div>
+        <div>
+          <label for="termsDays">Terms days (optional)</label>
+          <input id="termsDays" type="text" inputmode="numeric" placeholder="30" autocomplete="off" spellcheck="false">
+          <span class="hint">Used with the new invoice date. Leave blank to use the days in the terms name.</span>
+        </div>
+      </div>
+      <details>
+        <summary>Classes to keep (optional)</summary>
+        <div class="stack">
+          <label for="keepClass">Class names</label>
+          <input id="keepClass" type="text" placeholder="OPS" autocomplete="off" spellcheck="false">
+          <span class="hint">Comma-separated names that already exist in QuickBooks. Every other class is cleared.</span>
+        </div>
+      </details>
+    </div>
+
+    <div class="actions">
+      <button type="button" id="download" class="download" disabled>Download</button>
+    </div>
+
+    <div id="error" class="error" hidden role="alert"></div>
+    <div id="warnings" class="warnings" hidden></div>
+    <div id="preview"></div>
+    <footer>Web 1.0.0. Same cleanup rules as the Windows app 1.1.0. Drayage to DR, Fuel Surcharge to FS, PRE PULL to PRE, PER DIEM to PD, Chassis Rental to CHR.</footer>
+  </div>
+</main>
+
+<script id="trinium-iif-fix">
+"use strict";
+(function () {
+  var LOGIC_VERSION = "1.1.0";
+  var WEB_VERSION = "1.0.0";
+  var DEFAULT_TERMS = "Net 30";
+  var TERMS_COLUMNS = ["DATE", "DUEDATE", "TERMS"];
+  var DEFAULT_ITEM_MAP = Object.freeze({
+    "Drayage": "DR",
+    "Fuel Surcharge": "FS",
+    "PRE PULL": "PRE",
+    "PER DIEM": "PD",
+    "Chassis Rental": "CHR"
+  });
+
+  var textDecoder = new TextDecoder("windows-1252");
+  var byteForChar = new Map();
+  for (var bi = 0; bi < 256; bi++) {
+    var decodedByte = textDecoder.decode(new Uint8Array([bi]));
+    byteForChar.set(decodedByte, bi);
+  }
+
+  function decodeBytes(bytes) {
+    return textDecoder.decode(bytes);
+  }
+
+  function encodeBytes(str) {
+    var out = new Uint8Array(str.length);
+    for (var i = 0; i < str.length; i++) {
+      var ch = str.charAt(i);
+      var b = byteForChar.get(ch);
+      if (b === undefined) {
+        throw new Error("This file has a character that cannot be stored in the QuickBooks IIF encoding.");
+      }
+      out[i] = b;
+    }
+    return out;
+  }
+
+  function asUint8(input) {
+    if (input instanceof Uint8Array) return input;
+    if (input instanceof ArrayBuffer) return new Uint8Array(input);
+    throw new Error("expected file bytes");
+  }
+
+  function isPythonSpace(code) {
+    return code === 0x09 || code === 0x0a || code === 0x0b || code === 0x0c || code === 0x0d
+      || (code >= 0x1c && code <= 0x1f)
+      || code === 0x20 || code === 0x85 || code === 0xa0 || code === 0x1680
+      || (code >= 0x2000 && code <= 0x200a)
+      || code === 0x2028 || code === 0x2029 || code === 0x202f || code === 0x205f
+      || code === 0x3000;
+  }
+
+  function pyStrip(s) {
+    var i = 0;
+    var j = s.length;
+    while (i < j && isPythonSpace(s.charCodeAt(i))) i++;
+    while (j > i && isPythonSpace(s.charCodeAt(j - 1))) j--;
+    return s.slice(i, j);
+  }
+
+  function stripQuotes(s) {
+    var i = 0;
+    var j = s.length;
+    while (i < j && s.charAt(i) === '"') i++;
+    while (j > i && s.charAt(j - 1) === '"') j--;
+    return s.slice(i, j);
+  }
+
+  function rstripNewlines(s) {
+    var end = s.length;
+    while (end > 0) {
+      var c = s.charCodeAt(end - 1);
+      if (c !== 10 && c !== 13) break;
+      end--;
+    }
+    return s.slice(0, end);
+  }
+
+  function rstripChar(s, ch) {
+    var end = s.length;
+    while (end > 0 && s.charAt(end - 1) === ch) end--;
+    return s.slice(0, end);
+  }
+
+  function pythonRepr(value) {
+    var s = String(value);
+    var quote = "'";
+    if (s.indexOf("'") !== -1 && s.indexOf('"') === -1) quote = '"';
+    var out = quote;
+    for (var i = 0; i < s.length; i++) {
+      var ch = s.charAt(i);
+      var c = s.charCodeAt(i);
+      if (ch === "\\") out += "\\\\";
+      else if (ch === "\n") out += "\\n";
+      else if (ch === "\r") out += "\\r";
+      else if (ch === "\t") out += "\\t";
+      else if (ch === quote) out += "\\" + quote;
+      else if (c < 32 || c === 127) out += "\\x" + c.toString(16).padStart(2, "0");
+      else out += ch;
+    }
+    return out + quote;
+  }
+
+  function isLeap(year) {
+    return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+  }
+
+  function daysInMonth(year, month) {
+    if (month === 2) return isLeap(year) ? 29 : 28;
+    return [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month];
+  }
+
+  function parseMDY(s, kind) {
+    var re = kind === "Y"
+      ? /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/
+      : /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/;
+    var m = re.exec(s);
+    if (!m) return null;
+    var month = Number(m[1]);
+    var day = Number(m[2]);
+    var year = Number(m[3]);
+    if (kind === "y") year = year <= 68 ? 2000 + year : 1900 + year;
+    if (year < 1 || year > 9999 || month < 1 || month > 12) return null;
+    if (day < 1 || day > daysInMonth(year, month)) return null;
+    return { year: year, month: month, day: day };
+  }
+
+  function formatMDY(parts) {
+    var month = String(parts.month).padStart(2, "0");
+    var day = String(parts.day).padStart(2, "0");
+    var year = String(parts.year).padStart(4, "0");
+    return month + "/" + day + "/" + year;
+  }
+
+  function fourDigitYear(value) {
+    var stripped = pyStrip(String(value == null ? "" : value));
+    if (!stripped) return stripped;
+    var parsed = parseMDY(stripped, "Y") || parseMDY(stripped, "y");
+    if (!parsed) return stripped;
+    return formatMDY(parsed);
+  }
+
+  function parseFlexibleDate(value) {
+    var stripped = pyStrip(String(value == null ? "" : value));
+    if (!stripped) return null;
+    return parseMDY(stripped, "Y") || parseMDY(stripped, "y");
+  }
+
+  function parseCliDate(value) {
+    return parseMDY(String(value == null ? "" : value), "Y");
+  }
+
+  function addDays(parts, days) {
+    var utc = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days));
+    var year = utc.getUTCFullYear();
+    var month = utc.getUTCMonth() + 1;
+    var day = utc.getUTCDate();
+    if (year < 1 || year > 9999) throw new Error("resulting date is out of range");
+    return { year: year, month: month, day: day };
+  }
+
+  function pythonInt(digits) {
+    var ascii = String(digits).normalize("NFKD");
+    if (!/^[0-9]+$/.test(ascii)) throw new Error("terms day count is not a number");
+    var n = Number(ascii);
+    if (!Number.isSafeInteger(n)) throw new Error("terms day count is too large");
+    return n;
+  }
+
+  function daysInTerms(terms) {
+    if (!terms) return null;
+    var numbers = String(terms).match(/\p{Nd}+/gu);
+    if (!numbers || !numbers.length) return null;
+    return pythonInt(numbers[numbers.length - 1]);
+  }
+
+  function warn(warnings, message) {
+    if (warnings.indexOf(message) === -1) warnings.push(message);
+  }
+
+  function readLines(text) {
+    var lines = [];
+    var current = "";
+    for (var i = 0; i < text.length; i++) {
+      var ch = text.charAt(i);
+      if (ch === "\r") {
+        current += "\r";
+        if (text.charAt(i + 1) === "\n") {
+          current += "\n";
+          i++;
+        }
+        lines.push(current);
+        current = "";
+      } else if (ch === "\n") {
+        current += "\n";
+        lines.push(current);
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+    if (current.length) lines.push(current);
+    return lines;
+  }
+
+  function parseKeepClasses(text) {
+    var out = [];
+    var parts = String(text || "").split(",");
+    for (var i = 0; i < parts.length; i++) {
+      var name = stripQuotes(pyStrip(parts[i]));
+      if (name) out.push(name);
+    }
+    return out;
+  }
+
+  function importReadyName(filename) {
+    var raw = String(filename || "export.iif");
+    var slash = Math.max(raw.lastIndexOf("/"), raw.lastIndexOf("\\"));
+    var base = slash >= 0 ? raw.slice(slash + 1) : raw;
+    var dot = base.lastIndexOf(".");
+    if (dot > 0) return base.slice(0, dot) + "_IMPORT-READY" + base.slice(dot);
+    return base + "_IMPORT-READY";
+  }
+
+  function fixLines(lines, options) {
+    options = options || {};
+    var warnings = options.warnings || [];
+    var itemMap = options.itemMap == null ? DEFAULT_ITEM_MAP : options.itemMap;
+    var terms = options.terms == null ? DEFAULT_TERMS : pyStrip(String(options.terms));
+    if (!terms) terms = DEFAULT_TERMS;
+    var keepList = options.keepClass || [];
+    var keep = new Set(keepList);
+    var date = options.date ? String(options.date) : "";
+    var termsDays = null;
+    if (options.termsDays != null && options.termsDays !== "") {
+      termsDays = Number(options.termsDays);
+      if (!Number.isInteger(termsDays)) throw new Error("terms days must be a whole number");
+    }
+    var headers = new Map();
+    var warnedHeaders = new WeakSet();
+    var offset = daysInTerms(terms);
+    if (offset == null) {
+      warn(warnings, "warning: terms " + pythonRepr(terms) + " does not name a number of days; TRNS due dates were left unchanged");
+    }
+    var closedPeriodDue = Boolean(date) && termsDays != null;
+    var out = [];
+    for (var li = 0; li < lines.length; li++) {
+      var line = rstripNewlines(String(lines[li]));
+      var cols = line.split("\t");
+      var tag = cols[0];
+      if (tag.startsWith("!")) {
+        headers.set(tag.slice(1), cols);
+        out.push(line);
+        continue;
+      }
+      var hdr = headers.get(tag);
+      if (!hdr) {
+        if (tag === "TRNS") {
+          warn(warnings, "warning: missing !TRNS header; the terms fix was not applied");
+        }
+        out.push(line);
+        continue;
+      }
+      while (cols.length < hdr.length) cols.push("");
+      var idx = new Map();
+      for (var hi = 0; hi < hdr.length; hi++) idx.set(hdr[hi], hi);
+
+      if (idx.has("CLASS")) {
+        var classIdx = idx.get("CLASS");
+        var cleaned = stripQuotes(pyStrip(cols[classIdx]));
+        cols[classIdx] = keep.has(cleaned) ? cleaned : "";
+      }
+      if (idx.has("INVITEM")) {
+        var itemIdx = idx.get("INVITEM");
+        var itemName = cols[itemIdx];
+        cols[itemIdx] = Object.prototype.hasOwnProperty.call(itemMap, itemName) ? itemMap[itemName] : itemName;
+      }
+      if (date && idx.has("DATE")) cols[idx.get("DATE")] = date;
+      if (idx.has("DUEDATE")) {
+        var dueIdx = idx.get("DUEDATE");
+        if (date && termsDays != null) {
+          var closedParsed = parseMDY(date, "Y");
+          if (!closedParsed) {
+            throw new Error("time data " + pythonRepr(date) + " does not match format '%m/%d/%Y'");
+          }
+          cols[dueIdx] = formatMDY(addDays(closedParsed, termsDays));
+        } else {
+          cols[dueIdx] = fourDigitYear(cols[dueIdx]);
+        }
+      }
+      if (tag === "TRNS") {
+        var missing = [];
+        for (var ti = 0; ti < TERMS_COLUMNS.length; ti++) {
+          if (!idx.has(TERMS_COLUMNS[ti])) missing.push(TERMS_COLUMNS[ti]);
+        }
+        if (missing.length) {
+          if (!warnedHeaders.has(hdr)) {
+            warnedHeaders.add(hdr);
+            var label = missing.length === 1 ? "column" : "columns";
+            warn(warnings, "warning: missing " + label + " " + missing.join(", ") + "; the terms fix was not applied");
+          }
+        } else {
+          cols[idx.get("TERMS")] = terms;
+          if (offset != null && !closedPeriodDue) {
+            var rawDate = cols[idx.get("DATE")];
+            var invoice = fourDigitYear(pyStrip(rawDate));
+            var parsed = parseMDY(invoice, "Y");
+            if (!parsed) {
+              warn(warnings, "warning: could not read TRNS DATE " + pythonRepr(rawDate) + "; DUEDATE was left unchanged");
+            } else {
+              cols[idx.get("DUEDATE")] = formatMDY(addDays(parsed, offset));
+            }
+          }
+        }
+      }
+
+      var rendered;
+      if (tag === "TRNS") {
+        rendered = cols.join("\t");
+      } else if (tag === "SPL" && idx.has("CLASS")) {
+        var end = cols.length;
+        var keepThrough = idx.get("CLASS") + 1;
+        while (end > keepThrough && cols[end - 1] === "") end--;
+        rendered = cols.slice(0, end).join("\t");
+      } else {
+        rendered = rstripChar(cols.join("\t"), "\t");
+      }
+      out.push(rendered);
+    }
+    return out;
+  }
+
+  function fixFileBytes(inputBytes, options) {
+    var warnings = [];
+    var bytes = asUint8(inputBytes);
+    var text = decodeBytes(bytes);
+    var rawLines = readLines(text);
+    var merged = {};
+    options = options || {};
+    for (var key in options) {
+      if (Object.prototype.hasOwnProperty.call(options, key)) merged[key] = options[key];
+    }
+    merged.warnings = warnings;
+    var fixed = fixLines(rawLines, merged);
+    var output = fixed.join("\r\n") + "\r\n";
+    var originalLines = [];
+    for (var i = 0; i < rawLines.length; i++) originalLines.push(rstripNewlines(rawLines[i]));
+    return {
+      bytes: encodeBytes(output),
+      lines: fixed,
+      warnings: warnings,
+      originalLines: originalLines
+    };
+  }
+
+  globalThis.TriniumIifFix = {
+    LOGIC_VERSION: LOGIC_VERSION,
+    WEB_VERSION: WEB_VERSION,
+    DEFAULT_TERMS: DEFAULT_TERMS,
+    DEFAULT_ITEM_MAP: DEFAULT_ITEM_MAP,
+    fixLines: fixLines,
+    fixFileBytes: fixFileBytes,
+    importReadyName: importReadyName,
+    parseKeepClasses: parseKeepClasses,
+    parseFlexibleDate: parseFlexibleDate,
+    parseCliDate: parseCliDate
+  };
+})();
+</script>
+
+<script>
+"use strict";
+(function () {
+  var api = globalThis.TriniumIifFix;
+  var sourceBytes = null;
+  var sourceName = "";
+  var fixedBytes = null;
+  var loadSeq = 0;
+  var drop = document.getElementById("drop");
+  var browse = document.getElementById("browse");
+  var fileInput = document.getElementById("file");
+  var chosen = document.getElementById("chosen");
+  var termsInput = document.getElementById("terms");
+  var dateInput = document.getElementById("date");
+  var daysInput = document.getElementById("termsDays");
+  var keepInput = document.getElementById("keepClass");
+  var errorBox = document.getElementById("error");
+  var warnBox = document.getElementById("warnings");
+  var preview = document.getElementById("preview");
+  var download = document.getElementById("download");
+
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  function showError(message) {
+    fixedBytes = null;
+    download.disabled = true;
+    download.textContent = "Download";
+    errorBox.hidden = false;
+    errorBox.textContent = message;
+    warnBox.hidden = true;
+    warnBox.replaceChildren();
+    preview.replaceChildren();
+  }
+
+  function readOptions() {
+    var dateText = dateInput.value.trim();
+    var daysText = daysInput.value.trim();
+    var date = null;
+    if (dateText) {
+      if (!api.parseCliDate(dateText)) {
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateText)) {
+          throw new Error("That date is not a real calendar day. Use MM/DD/YYYY, for example 03/02/2026.");
+        }
+        throw new Error("Enter the new invoice date as MM/DD/YYYY, for example 03/02/2026.");
+      }
+      date = dateText;
+    }
+    var termsDays = null;
+    if (daysText) {
+      if (!/^[+-]?\d+$/.test(daysText)) {
+        throw new Error("Terms days should be a whole number such as 30.");
+      }
+      termsDays = Number(daysText);
+    }
+    return {
+      terms: termsInput.value,
+      date: date,
+      termsDays: termsDays,
+      keepClass: api.parseKeepClasses(keepInput.value)
+    };
+  }
+
+  function cell(row, name) {
+    if (!row || !row.idx.has(name)) return null;
+    var i = row.idx.get(name);
+    return i < row.cols.length ? row.cols[i] : "";
+  }
+
+  function groupInvoices(lines) {
+    var headers = new Map();
+    var invoices = [];
+    var current = null;
+    for (var i = 0; i < lines.length; i++) {
+      var cols = lines[i].split("\t");
+      var tag = cols[0] || "";
+      if (tag.startsWith("!")) {
+        headers.set(tag.slice(1), cols);
+        continue;
+      }
+      var hdr = headers.get(tag);
+      if (!hdr) continue;
+      var idx = new Map();
+      for (var h = 0; h < hdr.length; h++) idx.set(hdr[h], h);
+      var row = { cols: cols, idx: idx };
+      if (tag === "TRNS") {
+        current = { trns: row, spls: [] };
+        invoices.push(current);
+      } else if (tag === "SPL") {
+        if (!current) {
+          current = { trns: null, spls: [] };
+          invoices.push(current);
+        }
+        current.spls.push(row);
+      } else if (tag === "ENDTRNS") {
+        current = null;
+      }
+    }
+    return invoices;
+  }
+
+  function ymdCompare(a, b) {
+    if (a.year !== b.year) return a.year < b.year ? -1 : 1;
+    if (a.month !== b.month) return a.month < b.month ? -1 : 1;
+    if (a.day !== b.day) return a.day < b.day ? -1 : 1;
+    return 0;
+  }
+
+  function invoiceTitle(row, index) {
+    var doc = cell(row, "DOCNUM");
+    var name = cell(row, "NAME");
+    var id = cell(row, "TRNSID");
+    var label = doc ? "Invoice " + doc : (id ? "Invoice " + id : "Invoice " + (index + 1));
+    return name ? label + " — " + name : label;
+  }
+
+  function valueCell(caption, value, changed) {
+    var wrap = el("div", changed ? "val changed" : "val");
+    wrap.append(el("span", "k", caption));
+    var shown = value == null || value === "" ? "(blank)" : value;
+    wrap.append(el("span", "v", shown));
+    return wrap;
+  }
+
+  function addPair(parent, label, before, after) {
+    if (before == null && after == null) return;
+    var row = el("div", "field");
+    row.append(el("div", "label", label));
+    row.append(valueCell("Before", before, false));
+    row.append(valueCell("After", after, before !== after));
+    parent.append(row);
+  }
+
+  function renderInvoice(before, after, index, cutoff) {
+    var art = el("article", "invoice");
+    var left = before && before.trns;
+    var right = after && after.trns;
+    art.append(el("h2", null, invoiceTitle(left || right, index)));
+    if (cutoff && left) {
+      var original = cell(left, "DATE");
+      var parsed = original == null ? null : api.parseFlexibleDate(original);
+      if (parsed && ymdCompare(parsed, cutoff) < 0) {
+        art.append(el("p", "flag", "This invoice date is before the new invoice date."));
+      }
+    }
+    var fields = el("div", "fields");
+    addPair(fields, "Invoice date", cell(left, "DATE"), cell(right, "DATE"));
+    addPair(fields, "Terms", cell(left, "TERMS"), cell(right, "TERMS"));
+    addPair(fields, "Due date", cell(left, "DUEDATE"), cell(right, "DUEDATE"));
+    addPair(fields, "Class", cell(left, "CLASS"), cell(right, "CLASS"));
+    art.append(fields);
+    var splsBefore = before && before.spls ? before.spls : [];
+    var splsAfter = after && after.spls ? after.spls : [];
+    var count = Math.max(splsBefore.length, splsAfter.length);
+    if (count) {
+      art.append(el("h3", null, "Lines"));
+      for (var i = 0; i < count; i++) {
+        var block = el("div", "line");
+        block.append(el("p", "line-k", "Line " + (i + 1)));
+        var lineFields = el("div", "fields");
+        addPair(lineFields, "Item", cell(splsBefore[i], "INVITEM"), cell(splsAfter[i], "INVITEM"));
+        addPair(lineFields, "Class", cell(splsBefore[i], "CLASS"), cell(splsAfter[i], "CLASS"));
+        block.append(lineFields);
+        art.append(block);
+      }
+    }
+    return art;
+  }
+
+  function renderPreview(originalLines, fixedLines, warnings, cutoffDate) {
+    preview.replaceChildren();
+    warnBox.replaceChildren();
+    if (warnings.length) {
+      warnBox.hidden = false;
+      warnBox.append(el("h2", null, "Warnings"));
+      for (var w = 0; w < warnings.length; w++) warnBox.append(el("p", null, warnings[w]));
+    } else {
+      warnBox.hidden = true;
+    }
+    var before = groupInvoices(originalLines);
+    var after = groupInvoices(fixedLines);
+    var count = Math.max(before.length, after.length);
+    if (!count) {
+      preview.append(el("p", "empty", "No invoices were found in this file."));
+      return;
+    }
+    var cutoff = cutoffDate ? api.parseCliDate(cutoffDate) : null;
+    for (var i = 0; i < count; i++) preview.append(renderInvoice(before[i], after[i], i, cutoff));
+  }
+
+  function processCurrent() {
+    errorBox.hidden = true;
+    errorBox.textContent = "";
+    if (!sourceBytes) {
+      fixedBytes = null;
+      download.disabled = true;
+      download.textContent = "Download";
+      return;
+    }
+    var options;
+    try {
+      options = readOptions();
+    } catch (err) {
+      showError(err.message);
+      return;
+    }
+    var result;
+    try {
+      result = api.fixFileBytes(sourceBytes, options);
+    } catch (err) {
+      showError(err.message || "The file could not be processed.");
+      return;
+    }
+    var header = false;
+    for (var i = 0; i < result.originalLines.length; i++) {
+      if (result.originalLines[i].startsWith("!TRNS")) header = true;
+    }
+    if (!header) {
+      showError("That file does not look like a QuickBooks IIF invoice. Choose the .iif export.");
+      return;
+    }
+    fixedBytes = result.bytes;
+    download.disabled = false;
+    download.textContent = "Download " + api.importReadyName(sourceName);
+    renderPreview(result.originalLines, result.lines, result.warnings, options.date);
+  }
+
+  function loadFile(file) {
+    var seq = ++loadSeq;
+    var reader = new FileReader();
+    reader.onload = function () {
+      if (seq !== loadSeq) return;
+      sourceName = file.name || "export.iif";
+      sourceBytes = new Uint8Array(reader.result);
+      chosen.textContent = sourceName + " — original file is not changed";
+      processCurrent();
+    };
+    reader.onerror = function () {
+      if (seq !== loadSeq) return;
+      showError("The file could not be read.");
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function saveBytes(bytes, filename) {
+    var blob = new Blob([bytes], { type: "application/octet-stream" });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+  }
+
+  browse.addEventListener("click", function (event) {
+    event.stopPropagation();
+    fileInput.click();
+  });
+  drop.addEventListener("click", function (event) {
+    if (event.target.closest("button")) return;
+    fileInput.click();
+  });
+  drop.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      fileInput.click();
+    }
+  });
+  fileInput.addEventListener("change", function () {
+    var file = fileInput.files && fileInput.files[0];
+    fileInput.value = "";
+    if (file) loadFile(file);
+  });
+  ["dragenter", "dragover"].forEach(function (type) {
+    drop.addEventListener(type, function (event) {
+      event.preventDefault();
+      drop.classList.add("drag");
+    });
+  });
+  drop.addEventListener("dragleave", function () { drop.classList.remove("drag"); });
+  drop.addEventListener("drop", function (event) {
+    event.preventDefault();
+    drop.classList.remove("drag");
+    var file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+    if (file) loadFile(file);
+  });
+  [termsInput, dateInput, daysInput, keepInput].forEach(function (input) {
+    input.addEventListener("input", processCurrent);
+  });
+  download.addEventListener("click", function () {
+    processCurrent();
+    if (!fixedBytes || download.disabled) return;
+    saveBytes(fixedBytes, api.importReadyName(sourceName));
+  });
+})();
+</script>
+</body>
+</html>
