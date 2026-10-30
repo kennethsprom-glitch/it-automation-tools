@@ -1,0 +1,40 @@
+name: Trinium IIF web
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Node test tools
+        working-directory: quickbooks-iif-fixer/web
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: quickbooks-iif-fixer/web
+        run: npx playwright install --with-deps chromium
+
+      - name: Byte parity and file:// browser tests
+        working-directory: quickbooks-iif-fixer/web
+        run: npm test

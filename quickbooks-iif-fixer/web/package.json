@@ -1,0 +1,12 @@
+{
+  "name": "trinium-iif-web-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/parity.test.mjs tests/browser.test.mjs",
+    "test:parity": "node --test tests/parity.test.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}

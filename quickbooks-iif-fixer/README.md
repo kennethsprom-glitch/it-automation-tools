@@ -27,6 +27,23 @@ To open the same window from source on a machine that has Python and Tkinter:
 python3 fix_iif_gui.py
 ```
 
+## Web page
+
+`web/Trinium-to-GSL-IIF-Fix.html` is the same cleanup in one file. Open it in a browser, including from the download folder. It works offline. Files are processed only in your browser and are not uploaded. The download is named like the original with `_IMPORT-READY` added. The original file is not changed.
+
+Terms default to Net 30 and can be changed. The optional new invoice date and terms days are the closed-period options (`--date` and `--terms-days`). Invoice dates earlier than that new date are marked in the preview. The saved file still follows the Python rules, including rewriting every invoice and line date when a new date is set.
+
+The release tagged `web-v1.0.0` is titled **Trinium to GSL IIF Fix (Web) 1.0.0** and attaches that HTML file. It does not replace the Windows `.exe` release.
+
+```bash
+cd web
+npm ci
+npx playwright install --with-deps chromium
+npm test
+```
+
+Those tests run the page's script and `fix_iif.py` on the same fake samples and require byte-identical output, including a custom terms value and the closed-period options. They also open the HTML file from disk in headless Chromium, load a sample, and compare the download with Python.
+
 ## Errors it fixes
 
 | QuickBooks error | Cause | Fix |
@@ -61,7 +78,7 @@ python3 fix_iif.py export.iif fixed.iif --date 03/02/2026 --terms-days 30
 
 `--terms` defaults to `Net 30`. The number of days is taken from that name, so `Net 30` means the due date is the invoice date plus 30 days. When `--date` and `--terms-days` are both set, the due date follows `--terms-days`, which is the existing closed-period behavior. The terms name is still written.
 
-`samples/` holds made-up exports (fictional customers "Acme Imports", "Acme Harbor Sample", and "Example Freight Co") and the expected outputs. `sample_net45.iif` is an export whose terms are `Net 45`. Always test an import on a backup company file first.
+`samples/` holds made-up exports (fictional customers "Acme Imports", "Acme Harbor Sample", "Example Freight Co", and "Café Sample Co") and the expected outputs. `sample_net45.iif` is an export whose terms are `Net 45`. `sample_reordered.iif` puts the same kind of columns in a different order. `sample_encoding.iif` and `sample_cp1252.iif` are that fictional invoice saved as UTF-8 and Windows-1252. Always test an import on a backup company file first.
 
 ## Changelog
 
